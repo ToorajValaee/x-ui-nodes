@@ -7,7 +7,7 @@ set -euo pipefail
 # - API token, panel port, and panel path are read from /etc/x-ui/install-result.env.
 # - Creates a VLESS REALITY inbound on port 443 through the 3x-ui API.
 
-DEFAULT_DOMAIN_ROOT="valaee.com"
+DEFAULT_DOMAIN_ROOT="site.com"
 VPN_PORT="443"
 FALLBACK_PORT="8443"
 REALITY_TARGET="www.cloudflare.com:443"
@@ -88,37 +88,6 @@ get_public_ip() {
   printf '%s' "$ip"
 }
 
-configure_firewall() {
-  local panel_port="$1"
-
-  echo "=== Configuring firewall ==="
-
-  if command -v ufw >/dev/null 2>&1; then
-    ufw allow 22/tcp
-    ufw allow 80/tcp
-    ufw allow "${panel_port}/tcp"
-    ufw allow "${VPN_PORT}/tcp"
-    ufw allow "${FALLBACK_PORT}/tcp"
-    ufw --force enable
-    ufw status
-    return 0
-  fi
-
-  if command -v firewall-cmd >/dev/null 2>&1; then
-    systemctl enable --now firewalld || true
-    firewall-cmd --permanent --add-port=22/tcp || true
-    firewall-cmd --permanent --add-port=80/tcp || true
-    firewall-cmd --permanent --add-port="${panel_port}/tcp" || true
-    firewall-cmd --permanent --add-port="${VPN_PORT}/tcp" || true
-    firewall-cmd --permanent --add-port="${FALLBACK_PORT}/tcp" || true
-    firewall-cmd --reload || true
-    firewall-cmd --list-ports || true
-    return 0
-  fi
-
-  echo "WARNING: no supported firewall tool found. Configure provider firewall manually."
-}
-
 cloudflare_api() {
   local method="$1"
   local url="$2"
@@ -192,6 +161,37 @@ cf_upsert_a_record() {
   fi
 
   echo "Cloudflare DNS update success: ${record_name}"
+}
+
+configure_firewall() {
+  local panel_port="$1"
+
+  echo "=== Configuring firewall ==="
+
+  if command -v ufw >/dev/null 2>&1; then
+    ufw allow 22/tcp
+    ufw allow 80/tcp
+    ufw allow "${panel_port}/tcp"
+    ufw allow "${VPN_PORT}/tcp"
+    ufw allow "${FALLBACK_PORT}/tcp"
+    ufw --force enable
+    ufw status
+    return 0
+  fi
+
+  if command -v firewall-cmd >/dev/null 2>&1; then
+    systemctl enable --now firewalld || true
+    firewall-cmd --permanent --add-port=22/tcp || true
+    firewall-cmd --permanent --add-port=80/tcp || true
+    firewall-cmd --permanent --add-port="${panel_port}/tcp" || true
+    firewall-cmd --permanent --add-port="${VPN_PORT}/tcp" || true
+    firewall-cmd --permanent --add-port="${FALLBACK_PORT}/tcp" || true
+    firewall-cmd --reload || true
+    firewall-cmd --list-ports || true
+    return 0
+  fi
+
+  echo "WARNING: no supported firewall tool found. Configure provider firewall manually."
 }
 
 run_xui_installer() {
@@ -452,7 +452,12 @@ Client/VPN domain: ${NODE_DOMAIN}
 Do not use ${PANEL_DOMAIN} as the client address.
 EOF
 
+  echo
+  echo "============================================================"
+  echo "DONE"
+  echo "============================================================"
   cat "/root/${NODE_NAME}-node-info.txt"
+  echo "============================================================"
 }
 
 main() {
@@ -478,6 +483,7 @@ main() {
 
   echo
   echo "Node name:     ${NODE_NAME}"
+  echo "Root domain:   ${DOMAIN_ROOT}"
   echo "VPN domain:    ${NODE_DOMAIN}"
   echo "Panel domain:  ${PANEL_DOMAIN}"
   echo "VPN port:      ${VPN_PORT}"
@@ -499,11 +505,8 @@ main() {
   dig +short "$NODE_DOMAIN" || true
   dig +short "$PANEL_DOMAIN" || true
 
-  echo
-  echo "IMPORTANT before SSL step:"
-  echo "- ${PANEL_DOMAIN} must point to ${PUBLIC_IP}."
-  echo "- Cloudflare proxy must be DNS-only, not orange-cloud."
-  echo "- Port 80 must be open and free."
+  echo "Before SSL step, make sure Cloudflare proxy is DNS-only for: ${PANEL_DOMAIN}"
+  echo "The x-ui installer SSL step should use: ${PANEL_DOMAIN}"
   echo
 
   run_xui_installer
@@ -514,14 +517,6 @@ main() {
   create_reality_inbound
   restart_and_check
   write_info_file
-
-  echo
-  echo "============================================================"
-  echo "DONE"
-  echo "============================================================"
-  echo "One-line node setup finished."
-  echo "When adding this node in master, use ${PANEL_DOMAIN}:${PANEL_PORT}${PANEL_PATH}"
-  echo "For users/clients, use ${NODE_DOMAIN}:${VPN_PORT}."
 }
 
 main "$@"

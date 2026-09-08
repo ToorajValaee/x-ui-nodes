@@ -9,11 +9,11 @@ Automation scripts for preparing 3x-ui nodes with Cloudflare DNS and VLESS REALI
 It does the following:
 
 1. Asks for the node name, for example `ca1`, `ca2`, `de3`.
-2. Asks for the root domain, default `valaee.com`.
+2. Asks for the root domain, default `site.com`.
 3. Asks for a Cloudflare API token. The token is used only for DNS changes.
 4. Creates or updates two DNS records:
-   - `<node>.valaee.com` for client VPN traffic
-   - `<node>-panel.valaee.com` for panel/API access
+   - `<node>.site.com` for client VPN traffic
+   - `<node>-panel.site.com` for panel/API access
 5. Runs the normal 3x-ui installer.
 6. Reads the generated panel port, panel path, and API token from `/etc/x-ui/install-result.env`.
 7. Creates a VLESS REALITY inbound on port `443` through the 3x-ui API.
@@ -32,14 +32,14 @@ bash <(curl -fsSL https://raw.githubusercontent.com/ToorajValaee/x-ui-nodes/main
 The script creates two domains per node:
 
 ```text
-ca1.valaee.com        = VPN/client address
-ca1-panel.valaee.com  = panel/API address
+ca1.site.com        = VPN/client address
+ca1-panel.site.com  = panel/API address
 ```
 
 When adding the node to the master panel, use the panel domain:
 
 ```text
-Address: ca1-panel.valaee.com
+Address: ca1-panel.site.com
 Port: value from /root/ca1-node-info.txt
 Base path: value from /root/ca1-node-info.txt
 ```
@@ -47,10 +47,10 @@ Base path: value from /root/ca1-node-info.txt
 Client configs and subscription results should use the VPN domain:
 
 ```text
-ca1.valaee.com:443
+ca1.site.com:443
 ```
 
-Do not use `ca1-panel.valaee.com` as the client VPN address.
+Do not use `ca1-panel.site.com` as the client VPN address.
 
 ## During the 3x-ui installer
 
@@ -59,19 +59,19 @@ The script intentionally runs the normal 3x-ui installer, because SSL is handled
 When the installer asks for SSL/domain, use only the panel domain:
 
 ```text
-ca1-panel.valaee.com
+ca1-panel.site.com
 ```
 
 Do not use the VPN/client domain there:
 
 ```text
-ca1.valaee.com
+ca1.site.com
 ```
 
 Before the SSL step, make sure:
 
 ```text
-ca1-panel.valaee.com points to this server IP
+ca1-panel.site.com points to this server IP
 Cloudflare proxy is DNS-only, not orange-cloud
 Port 80 is open
 No other service is using port 80
@@ -87,7 +87,7 @@ Required permission:
 Zone DNS Edit
 ```
 
-The token should be scoped only to the zone you use, for example `valaee.com`.
+The token should be scoped only to the zone you use, for example `site.com`.
 
 ## REALITY defaults
 
